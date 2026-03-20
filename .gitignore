@@ -5,7 +5,7 @@ result
 .direnv
 __pycache__
 .ruff_cache
-.mypy_cache
+.ty
 .coverage
 .coverage.*
 htmlcov

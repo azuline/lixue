@@ -1,16 +1,13 @@
 [project]
 requires-python = ">= 3.12"
 
-[tool.black]
-line-length = 120
-
 [tool.ruff]
 line-length = 120
 preview = true
 src = ["."]
 exclude = [
   ".git",
-  ".mypy_cache",
+  ".ty",
   ".ruff_cache",
   ".venv",
   "__snapshots__",
@@ -57,17 +54,13 @@ unfixable = [
   "F841",
 ]
 
-[tool.mypy]
-strict = true
-strict_optional = true
-explicit_package_bases = true
+[tool.ty.src]
 exclude = [
-    "setup.py"
+    "setup.py",
 ]
 
-[[tool.mypy.overrides]]
-module = "setuptools"
-ignore_missing_imports = true
+[tool.ty.environment]
+python-version = "3.13"
 
 [tool.pytest.ini_options]
 addopts = [

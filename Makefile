@@ -1,7 +1,7 @@
 check: typecheck test lintcheck
 
 typecheck:
-	mypy .
+	ty check
 
 test:
 	pytest -n logical .
@@ -13,12 +13,10 @@ snapshot:
 lintcheck:
 	ruff format --check .
 	ruff check .
-	prettier --check .
 
 lint:
 	ruff format .
 	ruff check --fix .
-	prettier --write .
 
 clean:
 	git clean -xdf

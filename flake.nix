@@ -20,13 +20,13 @@
         version = nixpkgs.lib.strings.removeSuffix "\n" (
           builtins.readFile ./lixue-cards/lixue_cards/.version
         );
+        anki-lib = pkgs.anki.lib;
         py-deps = with python-pin.pkgs; {
           inherit
             # Runtime deps.
             click
             setuptools
             # Dev tools.
-            mypy
             pytest
             pytest-timeout
             pytest-cov
@@ -48,21 +48,28 @@
             }
             export LIXUE_ROOT="$(find-up flake.nix)"
             export PYTHONPATH="$LIXUE_ROOT/lixue-cards:''${PYTHONPATH:-}"
+            export PYTHONPATH="${anki-lib}/lib/python3.13/site-packages:$PYTHONPATH"
           '';
           buildInputs = [
             (pkgs.buildEnv {
               name = "lixue-devshell";
               paths = [
                 pkgs.ruff
-                pkgs.nodePackages.prettier
-                pkgs.pyright
+                pkgs.ty
                 python-with-deps
               ];
             })
           ];
         };
         packages = rec {
-          lixue-cards = pkgs.callPackage ./lixue-cards { inherit version python-pin py-deps; };
+          lixue-cards = pkgs.callPackage ./lixue-cards {
+            inherit
+              version
+              python-pin
+              py-deps
+              anki-lib
+              ;
+          };
           all = pkgs.buildEnv {
             name = "lixue-all";
             paths = [
