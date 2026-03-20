@@ -8,7 +8,6 @@ open the SQLite database directly via Anki's backend.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from anki.collection import Collection
 from anki.decks import DeckId

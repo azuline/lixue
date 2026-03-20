@@ -13,5 +13,5 @@ setuptools.setup(
     entry_points={"console_scripts": ["lixue-cards = lixue_cards.__main__:main"]},
     packages=["lixue_cards"],
     package_data={"lixue_cards": ["py.typed", ".version"]},
-    install_requires=["click", "anki"],
+    install_requires=["click"],
 )
