@@ -1,0 +1,13 @@
+# Nix
+result
+
+# Python
+.direnv
+__pycache__
+.ruff_cache
+.mypy_cache
+.coverage
+.coverage.*
+htmlcov
+*.egg-info
+.pytest_cache

@@ -1,0 +1,9 @@
+[run]
+branch = True
+source = .
+omit =
+    lixue-cards/lixue_cards/__main__.py
+    **/snapshots/*.py
+    **/*/setup.py
+    result/*
+    /nix/store/*
