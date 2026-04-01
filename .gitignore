@@ -4,5 +4,11 @@ result
 # Python
 .direnv
 __pycache__
+__codegen__
 .ruff_cache
 .venv
+.coverage
+.coverage.*
+htmlcov
+*.egg-info
+.pytest_cache

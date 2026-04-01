@@ -1,0 +1,10 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: ["queries.sql", "**/queries.sql"]
+    schema: "database/schema.sql"
+    codegen: [{ out: ".", plugin: "py" }]
+plugins:
+  - name: "py"
+    process: { cmd: "python -m tools.codegen_db_plugin" }
+    env: ["LIXUE_ROOT", "PATH", "LD_LIBRARY_PATH", "PYTHONPATH"]

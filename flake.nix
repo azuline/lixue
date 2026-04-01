@@ -18,7 +18,18 @@
         pkgs = import nixpkgs { inherit system; };
         python-pin = pkgs.python313;
         py-deps = with python-pin.pkgs; [
+          # Runtime deps.
+          click
           yoyo-migrations
+          # Codegen deps.
+          betterproto
+          jinja2
+          # Dev tools.
+          setuptools
+          pytest
+          pytest-timeout
+          pytest-cov
+          pytest-xdist
         ];
         python-with-deps = python-pin.withPackages (_: py-deps);
       in
@@ -33,6 +44,7 @@
               echo "$path"
             }
             export LIXUE_ROOT="$(find-up flake.nix)"
+            export PYTHONPATH="$LIXUE_ROOT:''${PYTHONPATH:-}"
           '';
           buildInputs = [
             (pkgs.buildEnv {
@@ -40,6 +52,7 @@
               paths = [
                 pkgs.just
                 pkgs.ruff
+                pkgs.sqlc
                 python-with-deps
               ];
             })

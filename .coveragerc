@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = .
+omit =
+    **/__codegen__/*
+    result/*
+    /nix/store/*

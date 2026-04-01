@@ -10,6 +10,7 @@ exclude = [
   ".ruff_cache",
   ".venv",
   ".direnv",
+  "**/__codegen__",
 ]
 
 [tool.ruff.lint]
@@ -34,6 +35,8 @@ select = [
   "C4",
   # flake8-import-conventions
   "ICN",
+  # flake8-pytest-style
+  "PT",
   # flake8-simplify
   "SIM",
   # flake8-use-pathlib
@@ -59,3 +62,18 @@ unfixable = [
   # Remove unused variables.
   "F841",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore unused arguments in test files (pytest fixtures).
+"*test*.py" = ["ARG001"]
+
+[tool.pytest.ini_options]
+norecursedirs = [".venv", ".*_cache", "__pycache__", ".direnv", "**/__codegen__"]
+addopts = [
+  "--cov=.",
+  "--cov-branch",
+  "--import-mode=importlib",
+]
+timeout = 15
+pythonpath = "."
+python_files = ["**/*_test.py"]
