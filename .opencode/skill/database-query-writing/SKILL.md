@@ -16,8 +16,8 @@ Access the generated query functions by importing from the codegen package and
 passing a `sqlite3.Connection`:
 
 ```python
-from database.__codegen__.queries import query_idea_get_by_id
-from database.connection import connect
+from __codegen__.queries import query_idea_get_by_id
+from foundation.database import connect
 
 with connect(db_path) as conn:
     idea = query_idea_get_by_id(conn, id=42)

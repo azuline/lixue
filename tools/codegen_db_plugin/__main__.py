@@ -30,7 +30,7 @@ import dataclasses
 import sqlite3
 from collections.abc import Iterator
 
-from database.__codegen__ import models
+from __codegen__ import models
 
 {% for query in queries -%}
 {%- if query.needs_custom_dataclass -%}
@@ -265,11 +265,11 @@ def _main() -> None:
     response = GenerateResponse()
 
     # Package init.
-    response.files.append(File(name="database/__codegen__/__init__.py", contents=b""))
+    response.files.append(File(name="__codegen__/__init__.py", contents=b""))
 
     # Models.
     models_content = generate_models(request.catalog)
-    response.files.append(File(name="database/__codegen__/models.py", contents=models_content.encode("utf-8")))
+    response.files.append(File(name="__codegen__/models.py", contents=models_content.encode("utf-8")))
 
     # Queries: group by source filepath and emit one queries.py per directory.
     queries_by_filepath: dict[str, list[Query]] = defaultdict(list)

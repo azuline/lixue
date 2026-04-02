@@ -6,15 +6,12 @@
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
-    Dict,
-    List,
     Optional,
 )
 
 import betterproto
 import grpclib
 from betterproto.grpc.grpclib_server import ServiceBase
-
 
 if TYPE_CHECKING:
     import grpclib.server
@@ -32,8 +29,8 @@ class File(betterproto.Message):
 class Settings(betterproto.Message):
     version: str = betterproto.string_field(1)
     engine: str = betterproto.string_field(2)
-    schema: List[str] = betterproto.string_field(3)
-    queries: List[str] = betterproto.string_field(4)
+    schema: list[str] = betterproto.string_field(3)
+    queries: list[str] = betterproto.string_field(4)
     codegen: "Codegen" = betterproto.message_field(12)
 
 
@@ -42,7 +39,7 @@ class Codegen(betterproto.Message):
     out: str = betterproto.string_field(1)
     plugin: str = betterproto.string_field(2)
     options: bytes = betterproto.bytes_field(3)
-    env: List[str] = betterproto.string_field(4)
+    env: list[str] = betterproto.string_field(4)
     process: "CodegenProcess" = betterproto.message_field(5)
     wasm: "CodegenWasm" = betterproto.message_field(6)
 
@@ -63,16 +60,16 @@ class Catalog(betterproto.Message):
     comment: str = betterproto.string_field(1)
     default_schema: str = betterproto.string_field(2)
     name: str = betterproto.string_field(3)
-    schemas: List["Schema"] = betterproto.message_field(4)
+    schemas: list["Schema"] = betterproto.message_field(4)
 
 
 @dataclass(eq=False, repr=False)
 class Schema(betterproto.Message):
     comment: str = betterproto.string_field(1)
     name: str = betterproto.string_field(2)
-    tables: List["Table"] = betterproto.message_field(3)
-    enums: List["Enum"] = betterproto.message_field(4)
-    composite_types: List["CompositeType"] = betterproto.message_field(5)
+    tables: list["Table"] = betterproto.message_field(3)
+    enums: list["Enum"] = betterproto.message_field(4)
+    composite_types: list["CompositeType"] = betterproto.message_field(5)
 
 
 @dataclass(eq=False, repr=False)
@@ -84,14 +81,14 @@ class CompositeType(betterproto.Message):
 @dataclass(eq=False, repr=False)
 class Enum(betterproto.Message):
     name: str = betterproto.string_field(1)
-    vals: List[str] = betterproto.string_field(2)
+    vals: list[str] = betterproto.string_field(2)
     comment: str = betterproto.string_field(3)
 
 
 @dataclass(eq=False, repr=False)
 class Table(betterproto.Message):
     rel: "Identifier" = betterproto.message_field(1)
-    columns: List["Column"] = betterproto.message_field(2)
+    columns: list["Column"] = betterproto.message_field(2)
     comment: str = betterproto.string_field(3)
 
 
@@ -129,9 +126,9 @@ class Query(betterproto.Message):
     text: str = betterproto.string_field(1)
     name: str = betterproto.string_field(2)
     cmd: str = betterproto.string_field(3)
-    columns: List["Column"] = betterproto.message_field(4)
-    params: List["Parameter"] = betterproto.message_field(5)
-    comments: List[str] = betterproto.string_field(6)
+    columns: list["Column"] = betterproto.message_field(4)
+    params: list["Parameter"] = betterproto.message_field(5)
+    comments: list[str] = betterproto.string_field(6)
     filename: str = betterproto.string_field(7)
     insert_into_table: "Identifier" = betterproto.message_field(8)
     filepath: str = betterproto.string_field(9)
@@ -147,7 +144,7 @@ class Parameter(betterproto.Message):
 class GenerateRequest(betterproto.Message):
     settings: "Settings" = betterproto.message_field(1)
     catalog: "Catalog" = betterproto.message_field(2)
-    queries: List["Query"] = betterproto.message_field(3)
+    queries: list["Query"] = betterproto.message_field(3)
     sqlc_version: str = betterproto.string_field(4)
     plugin_options: bytes = betterproto.bytes_field(5)
     global_options: bytes = betterproto.bytes_field(6)
@@ -155,11 +152,18 @@ class GenerateRequest(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class GenerateResponse(betterproto.Message):
-    files: List["File"] = betterproto.message_field(1)
+    files: list["File"] = betterproto.message_field(1)
 
 
 class CodegenServiceStub(betterproto.ServiceStub):
-    async def generate(self, generate_request: "GenerateRequest", *, timeout: Optional[float] = None, deadline: Optional["Deadline"] = None, metadata: Optional["MetadataLike"] = None) -> "GenerateResponse":
+    async def generate(
+        self,
+        generate_request: "GenerateRequest",
+        *,
+        timeout: float | None = None,
+        deadline: Optional["Deadline"] = None,
+        metadata: Optional["MetadataLike"] = None,
+    ) -> "GenerateResponse":
         return await self._unary_unary(
             "/plugin.CodegenService/Generate",
             generate_request,
@@ -180,7 +184,7 @@ class CodegenServiceBase(ServiceBase):
         response = await self.generate(request)
         await stream.send_message(response)
 
-    def __mapping__(self) -> Dict[str, grpclib.const.Handler]:
+    def __mapping__(self) -> dict[str, grpclib.const.Handler]:
         return {
             "/plugin.CodegenService/Generate": grpclib.const.Handler(
                 self.__rpc_generate,

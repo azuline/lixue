@@ -85,12 +85,6 @@ INNER JOIN (
 ) latest ON iv.id = latest.id AND iv.version = latest.max_version
 WHERE iv.deleted = 0;
 
-CREATE UNIQUE INDEX ideas_versioned_name_unique
-ON ideas_versioned(name)
-WHERE version = (
-    SELECT MAX(version) FROM ideas_versioned iv2 WHERE iv2.id = ideas_versioned.id
-) AND deleted = 0;
-
 -- Idea-Tag junction -----------------------------------------------------------
 
 CREATE TABLE idea_tags (

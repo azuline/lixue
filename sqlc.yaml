@@ -1,8 +1,8 @@
 version: "2"
 sql:
   - engine: "sqlite"
-    queries: ["queries.sql", "**/queries.sql"]
-    schema: "database/schema.sql"
+    queries: ["queries.sql"]
+    schema: "schema.sql"
     codegen: [{ out: ".", plugin: "py" }]
 plugins:
   - name: "py"

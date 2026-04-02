@@ -19,9 +19,9 @@ just codegen-db            # regenerate schema.sql and Python bindings
 - Never change a migration from another branch.
 - We do **not** support down-migrations.
 - After writing or editing a migration, always run `just codegen-db` to
-  regenerate `database/schema.sql` and the Python bindings.
+  regenerate `schema.sql` and the Python bindings.
 - To inspect the current schema, run `just codegen-db` and then read
-  `database/schema.sql`.
+  `schema.sql`.
 - Create at most one migration per branch. Before creating a new migration with
   `just new-migration`, check if the current branch already has a migration. If
   so, update that migration in-place instead of adding a new one.

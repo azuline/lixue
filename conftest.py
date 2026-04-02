@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from database.connection import connect, migrate
+from foundation.database import migrate
 
 
 @dataclasses.dataclass(slots=True)
