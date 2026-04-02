@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import dataclasses
+import warnings
 from pathlib import Path
 
 import pytest
 
-import foundation.database
+warnings.filterwarnings("ignore", category=UserWarning, module="yoyo")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="yoyo")
+warnings.filterwarnings("ignore", category=ResourceWarning)
+
+import foundation.database  # noqa: E402
 
 
 @dataclasses.dataclass(slots=True)

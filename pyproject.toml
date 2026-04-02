@@ -69,6 +69,12 @@ addopts = [
   "--cov-report=",
   "--import-mode=importlib",
   "--durations=10",
+
+]
+filterwarnings = [
+  "ignore::UserWarning",
+  "ignore::DeprecationWarning",
+  "ignore::ResourceWarning",
 ]
 timeout = 15
 pythonpath = "."
