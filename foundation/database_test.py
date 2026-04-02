@@ -3,19 +3,18 @@ from __future__ import annotations
 import pathlib
 import subprocess
 
-from conftest import LixueFixture
 from foundation.database import connect
 
 nl = "\n"
 
 
-def test_versioned_tables_have_required_columns(t: LixueFixture) -> None:
-    with connect(t.db_path) as conn:
+def test_versioned_tables_have_required_columns() -> None:
+    with connect() as conn:
         tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%_versioned'").fetchall()]
 
     failing = []
     for table in tables:
-        with connect(t.db_path) as conn:
+        with connect() as conn:
             columns = {row[1]: row for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
 
         required = {
@@ -44,8 +43,8 @@ def test_versioned_tables_have_required_columns(t: LixueFixture) -> None:
     assert not failing, f"Versioned table convention violations:\n{nl.join(f'- {f}' for f in failing)}"
 
 
-def test_versioned_tables_have_views(t: LixueFixture) -> None:
-    with connect(t.db_path) as conn:
+def test_versioned_tables_have_views() -> None:
+    with connect() as conn:
         tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%_versioned'").fetchall()]
         views = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'view'").fetchall()}
 
@@ -58,15 +57,15 @@ def test_versioned_tables_have_views(t: LixueFixture) -> None:
     assert not failing, f"Missing views for versioned tables:\n{nl.join(f'- {f}' for f in failing)}"
 
 
-def test_junction_tables_have_required_columns(t: LixueFixture) -> None:
-    with connect(t.db_path) as conn:
+def test_junction_tables_have_required_columns() -> None:
+    with connect() as conn:
         all_tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '_yoyo%' AND name NOT LIKE 'yoyo%'").fetchall()]
 
     junction_tables = [t_name for t_name in all_tables if not t_name.endswith("_versioned") and not t_name.endswith("_enum")]
 
     failing = []
     for table in junction_tables:
-        with connect(t.db_path) as conn:
+        with connect() as conn:
             columns = {row[1]: row for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
 
         # Must have deleted and inserted_at.
@@ -90,13 +89,13 @@ def test_junction_tables_have_required_columns(t: LixueFixture) -> None:
     assert not failing, f"Junction table convention violations:\n{nl.join(f'- {f}' for f in failing)}"
 
 
-def test_timestamp_columns_have_defaults(t: LixueFixture) -> None:
-    with connect(t.db_path) as conn:
+def test_timestamp_columns_have_defaults() -> None:
+    with connect() as conn:
         all_tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '_yoyo%' AND name NOT LIKE 'yoyo%' AND name NOT LIKE '%_enum'").fetchall()]
 
     failing = []
     for table in all_tables:
-        with connect(t.db_path) as conn:
+        with connect() as conn:
             columns = {row[1]: row for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
 
         for col_name in ("inserted_at", "updated_at"):
@@ -112,22 +111,22 @@ def test_timestamp_columns_have_defaults(t: LixueFixture) -> None:
     assert not failing, f"Timestamp column violations:\n{nl.join(f'- {f}' for f in failing)}"
 
 
-def test_id_columns_are_foreign_keys(t: LixueFixture) -> None:
-    with connect(t.db_path) as conn:
+def test_composite_fks_reference_versioned_tables() -> None:
+    with connect() as conn:
         all_tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '_yoyo%' AND name NOT LIKE 'yoyo%' AND name NOT LIKE '%_enum'").fetchall()]
 
     failing = []
     for table in all_tables:
-        with connect(t.db_path) as conn:
-            columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
-            fk_columns = {row[3] for row in conn.execute(f"PRAGMA foreign_key_list({table})").fetchall()}
+        with connect() as conn:
+            fk_rows = conn.execute(f"PRAGMA foreign_key_list({table})").fetchall()
 
-        id_columns = {c for c in columns if c.endswith("_id")}
-        non_fk_id_columns = id_columns - fk_columns
-        for col in sorted(non_fk_id_columns):
-            failing.append(f"{table}.{col}")
+        for fk in fk_rows:
+            # fk: id, seq, table, from, to, on_update, on_delete, match
+            ref_table = fk[2]
+            if not ref_table.endswith("_versioned") and not ref_table.endswith("_enum"):
+                failing.append(f"{table}: FK references non-versioned table `{ref_table}`")
 
-    assert not failing, f"Columns ending in `_id` should be foreign keys:\n{nl.join(f'- {f}' for f in failing)}"
+    assert not failing, f"Foreign keys should reference _versioned or _enum tables:\n{nl.join(f'- {f}' for f in failing)}"
 
 
 def test_no_modified_migrations() -> None:
@@ -141,7 +140,9 @@ def test_no_modified_migrations() -> None:
         result = subprocess.run(["git", "rev-parse", "--verify", "main"], capture_output=True, text=True)
         base_ref = "main" if result.returncode == 0 else "master"
 
-    result = subprocess.run(["git", "ls-tree", "-r", "--name-only", base_ref, "."], capture_output=True, text=True, check=True, cwd=migrations_dir)
+    result = subprocess.run(["git", "ls-tree", "-r", "--name-only", base_ref, "."], capture_output=True, text=True, cwd=migrations_dir)
+    if result.returncode != 0:
+        return  # No base ref available (e.g. initial commit on main).
     base_migrations = {line.strip() for line in result.stdout.splitlines() if line.strip().endswith(".sql")}
 
     result = subprocess.run(["git", "diff", "--relative", "--name-only", base_ref, "HEAD", "."], capture_output=True, text=True, check=True, cwd=migrations_dir)

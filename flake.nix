@@ -15,7 +15,17 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [
+            (_: super: {
+              sqlc-gen-python = super.writeShellScriptBin "sqlc-gen-python" ''
+                cd "$LIXUE_ROOT"
+                exec ${python-with-deps}/bin/python -m tools.codegen_db_plugin "$@"
+              '';
+            })
+          ];
+        };
         python-pin = pkgs.python313;
         py-deps = with python-pin.pkgs; [
           # Runtime deps.
@@ -53,6 +63,7 @@
                 pkgs.just
                 pkgs.ruff
                 pkgs.sqlc
+                pkgs.sqlc-gen-python
                 python-with-deps
               ];
             })

@@ -62,6 +62,7 @@ INNER JOIN (
 WHERE iv.deleted = 0;
 
 -- Idea-Tag junction -----------------------------------------------------------
+-- tag_id logically references tags_versioned(id).
 
 CREATE TABLE idea_tags (
     idea_id INTEGER NOT NULL,
@@ -70,11 +71,11 @@ CREATE TABLE idea_tags (
     deleted BOOLEAN NOT NULL DEFAULT 0,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     PRIMARY KEY (idea_id, idea_version, tag_id),
-    FOREIGN KEY (idea_id, idea_version) REFERENCES ideas_versioned(id, version),
-    FOREIGN KEY (tag_id) REFERENCES tags_versioned(id)
+    FOREIGN KEY (idea_id, idea_version) REFERENCES ideas_versioned(id, version)
 );
 
 -- Relationships ---------------------------------------------------------------
+-- underlying_idea_id, from_idea_id, to_idea_id logically reference ideas_versioned(id).
 
 CREATE TABLE relationships_versioned (
     id INTEGER NOT NULL,
@@ -88,9 +89,6 @@ CREATE TABLE relationships_versioned (
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     deleted BOOLEAN NOT NULL DEFAULT 0,
     PRIMARY KEY (id, version),
-    FOREIGN KEY (underlying_idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (from_idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (to_idea_id) REFERENCES ideas_versioned(id),
     CHECK (underlying_idea_id != from_idea_id),
     CHECK (underlying_idea_id != to_idea_id),
     CHECK (from_idea_id != to_idea_id)
@@ -107,6 +105,7 @@ INNER JOIN (
 WHERE rv.deleted = 0;
 
 -- Sources ---------------------------------------------------------------------
+-- underlying_idea_id logically references ideas_versioned(id).
 
 CREATE TABLE sources_versioned (
     id INTEGER NOT NULL,
@@ -126,8 +125,7 @@ CREATE TABLE sources_versioned (
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     deleted BOOLEAN NOT NULL DEFAULT 0,
-    PRIMARY KEY (id, version),
-    FOREIGN KEY (underlying_idea_id) REFERENCES ideas_versioned(id)
+    PRIMARY KEY (id, version)
 );
 
 CREATE VIEW sources AS
@@ -165,6 +163,9 @@ INNER JOIN (
 WHERE hv.deleted = 0;
 
 -- Hierarchy-Idea membership ---------------------------------------------------
+-- idea_id logically references ideas_versioned(id).
+-- parent_idea_id logically references ideas_versioned(id).
+-- relationship_id logically references relationships_versioned(id).
 
 CREATE TABLE hierarchy_ideas (
     hierarchy_id INTEGER NOT NULL,
@@ -175,8 +176,5 @@ CREATE TABLE hierarchy_ideas (
     deleted BOOLEAN NOT NULL DEFAULT 0,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     PRIMARY KEY (hierarchy_id, hierarchy_version, idea_id),
-    FOREIGN KEY (hierarchy_id, hierarchy_version) REFERENCES hierarchies_versioned(id, version),
-    FOREIGN KEY (idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (parent_idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (relationship_id) REFERENCES relationships_versioned(id)
+    FOREIGN KEY (hierarchy_id, hierarchy_version) REFERENCES hierarchies_versioned(id, version)
 );

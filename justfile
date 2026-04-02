@@ -32,6 +32,11 @@ migrate:  ## Create/migrate the knowledge database.
 new-migration MSG:  ## Create a new migration file. ALWAYS use this to create a new migration.
     yoyo new --sql --message "{{MSG}}" migrations/
 
+# CLI
+
+lixue *ARGS:  ## Run the lixue CLI.
+    python -m cli {{ARGS}}
+
 # CODEGEN
 
 codegen-db:  ## Regenerate sqlc Python bindings and schema.sql from migrations.

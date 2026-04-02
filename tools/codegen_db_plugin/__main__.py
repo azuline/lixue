@@ -2,8 +2,6 @@
 
 import itertools
 import sys
-from collections import defaultdict
-from pathlib import Path
 
 import click
 import jinja2
@@ -250,19 +248,10 @@ def _main() -> None:
     response.files.append(File(name="__codegen__/models.py", contents=models_content.encode("utf-8")))
 
     # Queries: group by source filepath and emit one queries.py per directory.
-    queries_by_filepath: dict[str, list[Query]] = defaultdict(list)
-    for query in request.queries:
-        queries_by_filepath[query.filepath].append(query)
-    cwd = str(Path.cwd().absolute())
-    for filepath, queries in queries_by_filepath.items():
-        sql_path = Path(filepath)
-        assert sql_path.name == "queries.sql"
-        output_dir = sql_path.parent / "__codegen__"
-        output_path = output_dir / "queries.py"
-        init_path = output_dir / "__init__.py"
-        response.files.append(File(name=str(init_path).removeprefix(cwd).lstrip("/"), contents=b""))
-        queries_content = generate_queries(queries, request.catalog)
-        response.files.append(File(name=str(output_path).removeprefix(cwd).lstrip("/"), contents=queries_content.encode("utf-8")))
+    # sqlc may leave filepath empty for SQLite; treat all queries as one group.
+    all_queries = list(request.queries)
+    queries_content = generate_queries(all_queries, request.catalog)
+    response.files.append(File(name="__codegen__/queries.py", contents=queries_content.encode("utf-8")))
 
     sys.stdout.buffer.write(bytes(response))
 
