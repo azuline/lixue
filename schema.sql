@@ -22,10 +22,7 @@ CREATE TABLE hierarchy_ideas (
     deleted BOOLEAN NOT NULL DEFAULT 0,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     PRIMARY KEY (hierarchy_id, hierarchy_version, idea_id),
-    FOREIGN KEY (hierarchy_id, hierarchy_version) REFERENCES hierarchies_versioned(id, version),
-    FOREIGN KEY (idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (parent_idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (relationship_id) REFERENCES relationships_versioned(id)
+    FOREIGN KEY (hierarchy_id, hierarchy_version) REFERENCES hierarchies_versioned(id, version)
 );
 
 CREATE TABLE idea_tags (
@@ -35,8 +32,7 @@ CREATE TABLE idea_tags (
     deleted BOOLEAN NOT NULL DEFAULT 0,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     PRIMARY KEY (idea_id, idea_version, tag_id),
-    FOREIGN KEY (idea_id, idea_version) REFERENCES ideas_versioned(id, version),
-    FOREIGN KEY (tag_id) REFERENCES tags_versioned(id)
+    FOREIGN KEY (idea_id, idea_version) REFERENCES ideas_versioned(id, version)
 );
 
 CREATE TABLE ideas_versioned (
@@ -67,9 +63,6 @@ CREATE TABLE relationships_versioned (
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     deleted BOOLEAN NOT NULL DEFAULT 0,
     PRIMARY KEY (id, version),
-    FOREIGN KEY (underlying_idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (from_idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (to_idea_id) REFERENCES ideas_versioned(id),
     CHECK (underlying_idea_id != from_idea_id),
     CHECK (underlying_idea_id != to_idea_id),
     CHECK (from_idea_id != to_idea_id)
@@ -93,8 +86,7 @@ CREATE TABLE sources_versioned (
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     deleted BOOLEAN NOT NULL DEFAULT 0,
-    PRIMARY KEY (id, version),
-    FOREIGN KEY (underlying_idea_id) REFERENCES ideas_versioned(id)
+    PRIMARY KEY (id, version)
 );
 
 CREATE TABLE tags_versioned (
