@@ -45,9 +45,7 @@ def _dump_schema(root: Path, schema_sql: Path) -> None:
 
         conn = sqlite3.connect(tmp_path)
         try:
-            cursor = conn.execute(
-                "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE '_yoyo%' AND name NOT LIKE 'yoyo%' ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 WHEN 'view' THEN 2 ELSE 3 END, name"
-            )
+            cursor = conn.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE '_yoyo%' AND name NOT LIKE 'yoyo%' ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 WHEN 'view' THEN 2 ELSE 3 END, name")
             statements = [row[0] for row in cursor.fetchall()]
         finally:
             conn.close()

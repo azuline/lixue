@@ -37,9 +37,15 @@ complete until both pass. Take ownership over the whole codebase; even if
 another programmer introduced the error, you should fix it.
 
 ```bash
-just lint      # auto-fix: ruff format + ruff check --fix
-just check     # test + lintcheck (full CI)
+just lint
+just test [-vv]  # Use -vv when debugging test specific failures.
 ```
+
+If you are debugging a failing test and trying to figure out why it is failing,
+**always** start with running `just lint` and fixing any errors. This can solve
+the problem.
+
+`just help` lists common commands.
 
 ## Dev environment
 
@@ -49,6 +55,142 @@ Managed via Nix flakes. Enter the dev shell with `nix develop` or use direnv
 - Python 3.13 with yoyo-migrations and all dev dependencies
 - ruff (linter/formatter), sqlc, pytest
 - `PYTHONPATH` set so that project root is importable
+
+## Bespoke tooling
+
+We leverage bespoke dev tools for developer experience. Add tools under
+`tools/` as Python packages:
+
+```
+tools/my_tool/
+  __init__.py          # empty
+  __main__.py
+```
+
+Register each tool in the `justfile`.
+
+Existing tools are:
+
+- `just codegen-db` - Regenerate sqlc Python bindings and schema.sql from migrations.
+
+# Design patterns
+
+## Dataclasses
+
+Use `@dataclasses.dataclass(slots=True)` for data containers. Reserve classic
+classes for third-party interfaces. NEVER use a raw dict as a data container
+when the keys are statically known. ALWAYS use a dataclass.
+
+## Private functions
+
+Prefix all module-private symbols (functions, constants, classes, methods) with
+`_`. When unsure, mark it private. Put module-private code at the BOTTOM of the
+file, **NOT THE TOP**. Public exports go at the top.
+
+## Parse, don't validate
+
+Follow the "parse, don't validate" principle by combining data parsing and
+validation into single functions. Parse functions should return structured
+dataclasses.
+
+```python
+# Instead of
+validate_data(some_dict)
+# uses some_dict
+
+
+# Prefer
+@dataclasses.dataclass
+class StructuredData: ...
+
+
+data = parse_structured_data(some_dict)
+# uses data
+```
+
+## Errors
+
+Error messages must be lowercase phrases separated by colons:
+
+```python
+raise SomeError("failed to read file: file not found", path=path)
+```
+
+### Error handling
+
+We have a robust system that does not tolerate undefined behaviors:
+
+1. Fail fast. Do not silently skip, fallback, or continue unless instructed.
+2. Do not catch exceptions unnecessarily; let them bubble up so issues can be
+   observed and debugged. Only catch exceptions when you have a specific
+   recovery strategy.
+3. NEVER use general try/except blocks that silence errors. Only catch specific
+   exceptions when you have a concrete plan to handle them.
+4. When instructed to "let errors bubble up," do NOT add try/except blocks.
+5. NEVER catch a bare `Exception`. ONLY catch specific errors.
+6. Do NOT allow for graceful degradation. The code path should succeed OR raise
+   an error.
+
+```python
+# WRONG: Swallowing errors and continuing
+for item in items:
+    try:
+        result = process_item(item)
+        results.append(result)
+    except ValueError:
+        continue  # This hides the real problem
+
+# RIGHT: Let errors bubble up to expose the issue
+for item in items:
+    result = process_item(item)  # Will fail fast if there's an issue
+    results.append(result)
+```
+
+# Legibility
+
+## Module layout
+
+Keep `__init__.py` empty. Put module-level code in a file that matches the
+package name, e.g. `foundation/database.py`.
+
+Place public exports at the top of the file; private functions and helpers go at
+the bottom.
+
+## Docstrings
+
+Do NOT write docstrings. The human programmer will write high-quality bespoke
+docstrings once you are done with your work. **DO NOT WRITE DOCSTRINGS.**
+
+## Imports
+
+For standard library and third-party dependencies, import full modules rather
+than individual functions unless the function name is unique or the import path
+has three-or-more parts.
+
+```python
+# Prefer
+import dataclasses
+@dataclasses.dataclass(slots=True)
+
+# Over
+from dataclasses import dataclass
+```
+
+## Date Parsing
+
+When parsing ISO dates, use `datetime.fromisoformat()` directly. Let parsing
+errors bubble up instead of defaulting to fallback dates:
+
+```python
+# Bad: silently falling back to today's date
+try:
+    date = datetime.datetime.fromisoformat(date_str).date()
+except (ValueError, AttributeError):
+    date = datetime.date.today()
+
+# Good: let the error bubble up to expose data quality issues
+date = datetime.datetime.fromisoformat(date_str).date()
+```
 
 # Database
 
@@ -122,81 +264,17 @@ artifacts. To regenerate:
 just codegen-db
 ```
 
-# Design patterns
-
-## Dataclasses
-
-Use `@dataclasses.dataclass(slots=True)` for data containers. Reserve classic
-classes for third-party interfaces. NEVER use a raw dict as a data container
-when the keys are statically known. ALWAYS use a dataclass.
-
-## Private functions
-
-Prefix all module-private symbols (functions, constants, classes, methods) with
-`_`. When unsure, mark it private. Put module-private code at the BOTTOM of the
-file, **NOT THE TOP**. Public exports go at the top.
-
-## Parse, don't validate
-
-Combine data parsing and validation into single functions that return structured
-dataclasses.
-
-## Errors
-
-Error messages must be lowercase phrases separated by colons:
-
-```python
-raise SomeError("failed to read file: file not found", path=path)
-```
-
-### Error handling
-
-We have a robust system that does not tolerate undefined behaviors:
-
-1. Fail fast. Do not silently skip, fallback, or continue unless instructed.
-2. Do not catch exceptions unnecessarily; let them bubble up so issues can be
-   observed and debugged.
-3. NEVER use general try/except blocks that silence errors. Only catch specific
-   exceptions when you have a concrete plan to handle them.
-4. When instructed to "let errors bubble up," do NOT add try/except blocks.
-5. NEVER catch a bare `Exception`. ONLY catch specific errors.
-6. Do NOT allow for graceful degradation. The code path should succeed OR raise
-   an error.
-
-# Legibility
-
-## Module layout
-
-Keep `__init__.py` empty. Put module-level code in a file that matches the
-package name, e.g. `foundation/database.py`.
-
-Place public exports at the top of the file; private functions and helpers go at
-the bottom.
-
-## Docstrings
-
-Do NOT write docstrings. The human programmer will write high-quality bespoke
-docstrings once you are done with your work. **DO NOT WRITE DOCSTRINGS.**
-
-## Imports
-
-For standard library and third-party dependencies, import full modules rather
-than individual functions unless the function name is unique or the import path
-has three-or-more parts.
-
-```python
-# Prefer
-import dataclasses
-@dataclasses.dataclass(slots=True)
-
-# Over
-from dataclasses import dataclass
-```
-
 # Testing
 
 Treat tests as first-class citizens of the codebase. They are equal in
-importance to the implementation.
+importance to the implementation. This means that:
+
+1. We build useful abstractions for efficient and robust test writing.
+2. We limit the tests to a small set of extremely high value tests.
+3. We carefully choose each step and property under test to cover the desired
+   behaviors.
+
+Refer to the `python-test-writing` skill whenever you are writing a test.
 
 - Place tests in `pkg/module_test.py` next to the implementation.
 - Keep a flat hierarchy of test functions. Do not nest tests inside classes.
@@ -226,20 +304,3 @@ Executable scripts live in `scripts/`. Each script is a standalone `chmod +x`
 Python file with a `#!/usr/bin/env python3` shebang. Scripts should be
 self-contained and import only from the standard library and dependencies
 available in the Nix dev shell.
-
-# Bespoke tooling
-
-We leverage bespoke dev tools for developer experience. Add tools under
-`tools/` as Python packages:
-
-```
-tools/my_tool/
-  __init__.py          # empty
-  __main__.py
-```
-
-Register each tool in the `justfile`.
-
-Existing tools are:
-
-- `just codegen-db` - Regenerate sqlc Python bindings and schema.sql from migrations.

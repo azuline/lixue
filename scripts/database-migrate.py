@@ -11,7 +11,7 @@ MIGRATIONS_DIR = pathlib.Path(__file__).resolve().parent.parent / "migrations"
 
 def main() -> None:
     if not MIGRATIONS_DIR.is_dir():
-        print(f"migrations directory not found: {MIGRATIONS_DIR}", file=sys.stderr)
+        print(f"migrations directory not found: {MIGRATIONS_DIR}", file=sys.stderr)  # noqa: T201
         sys.exit(1)
 
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -22,10 +22,10 @@ def main() -> None:
     with backend.lock():
         to_apply = backend.to_apply(migrations)
         if not to_apply:
-            print(f"database is up to date: {DATABASE_PATH}")
+            print(f"database is up to date: {DATABASE_PATH}")  # noqa: T201
             return
         backend.apply_migrations(to_apply)
-        print(f"applied {len(to_apply)} migration(s) to: {DATABASE_PATH}")
+        print(f"applied {len(to_apply)} migration(s) to: {DATABASE_PATH}")  # noqa: T201
 
 
 if __name__ == "__main__":

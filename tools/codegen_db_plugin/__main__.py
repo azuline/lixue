@@ -133,9 +133,7 @@ def generate_models(catalog: Catalog) -> str:
     tables = [
         {
             "class_name": f"{_snake_to_pascal(_depluralize_table_name(table.rel.name))}Model",
-            "columns": [
-                {"name": column.name, "python_type": _map_sqlite_type_to_python(column)} for column in table.columns
-            ],
+            "columns": [{"name": column.name, "python_type": _map_sqlite_type_to_python(column)} for column in table.columns],
         }
         for table in itertools.chain(*[s.tables for s in catalog.schemas])
         if not table.rel.name.startswith("_yoyo")
@@ -168,39 +166,19 @@ def generate_queries(queries: list[Query], catalog: Catalog | None = None) -> st
             "constant_name": query.name.upper(),
             "text": query.text,
             "cmd": query.cmd,
-            "params_signature": (
-                f", *, {', '.join(f'{get_param_name(p)}: {_map_sqlite_type_to_python(p.column)}' for p in query.params)}"
-                if query.params
-                else ""
-            ),
+            "params_signature": (f", *, {', '.join(f'{get_param_name(p)}: {_map_sqlite_type_to_python(p.column)}' for p in query.params)}" if query.params else ""),
             "return_type": {
                 ":exec": "None",
                 ":execresult": "sqlite3.Cursor",
                 ":execlastid": "int",
-                ":one": (
-                    _map_sqlite_type_to_python(query.columns[0])
-                    if is_single_value_query(query)
-                    else (get_model_name(query) if needs_custom_dataclass(query) else f"models.{get_model_name(query)}")
-                )
-                if query.columns
-                else "sqlite3.Row",
+                ":one": (_map_sqlite_type_to_python(query.columns[0]) if is_single_value_query(query) else (get_model_name(query) if needs_custom_dataclass(query) else f"models.{get_model_name(query)}")) if query.columns else "sqlite3.Row",
                 ":many": (
-                    f"Iterator[{_map_sqlite_type_to_python(query.columns[0])}]"
-                    if is_single_value_query(query)
-                    else (
-                        f"Iterator[{get_model_name(query)}]"
-                        if needs_custom_dataclass(query)
-                        else f"Iterator[models.{get_model_name(query)}]"
-                    )
+                    f"Iterator[{_map_sqlite_type_to_python(query.columns[0])}]" if is_single_value_query(query) else (f"Iterator[{get_model_name(query)}]" if needs_custom_dataclass(query) else f"Iterator[models.{get_model_name(query)}]")
                 )
                 if query.columns
                 else "Iterator[sqlite3.Row]",
             }.get(query.cmd, "None"),
-            "param_tuple": (
-                "(" + ", ".join(get_param_name(p) for p in query.params) + ("," if len(query.params) == 1 else "") + ")"
-                if query.params
-                else "()"
-            ),
+            "param_tuple": ("(" + ", ".join(get_param_name(p) for p in query.params) + ("," if len(query.params) == 1 else "") + ")" if query.params else "()"),
             "model_name": get_model_name(query) if query.columns else None,
             "columns": [
                 {
@@ -284,9 +262,7 @@ def _main() -> None:
         init_path = output_dir / "__init__.py"
         response.files.append(File(name=str(init_path).removeprefix(cwd).lstrip("/"), contents=b""))
         queries_content = generate_queries(queries, request.catalog)
-        response.files.append(
-            File(name=str(output_path).removeprefix(cwd).lstrip("/"), contents=queries_content.encode("utf-8"))
-        )
+        response.files.append(File(name=str(output_path).removeprefix(cwd).lstrip("/"), contents=queries_content.encode("utf-8")))
 
     sys.stdout.buffer.write(bytes(response))
 
