@@ -15,40 +15,16 @@ INSERT INTO relationship_kind_enum (value) VALUES
     ('contradiction'),
     ('influence');
 
--- Disciplines -----------------------------------------------------------------
-
-CREATE TABLE disciplines_versioned (
-    id INTEGER NOT NULL,
-    version INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id, version)
-);
-
-CREATE VIEW disciplines AS
-SELECT dv.*
-FROM disciplines_versioned dv
-INNER JOIN (
-    SELECT id, MAX(version) AS max_version
-    FROM disciplines_versioned
-    GROUP BY id
-) latest ON dv.id = latest.id AND dv.version = latest.max_version
-WHERE dv.deleted = 0;
-
 -- Tags ------------------------------------------------------------------------
 
 CREATE TABLE tags_versioned (
     id INTEGER NOT NULL,
     version INTEGER NOT NULL,
     name TEXT NOT NULL,
-    discipline_id INTEGER,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id, version),
-    FOREIGN KEY (discipline_id) REFERENCES disciplines_versioned(id)
+    deleted BOOLEAN NOT NULL DEFAULT 0,
+    PRIMARY KEY (id, version)
 );
 
 CREATE VIEW tags AS
@@ -68,10 +44,10 @@ CREATE TABLE ideas_versioned (
     version INTEGER NOT NULL,
     name TEXT NOT NULL,
     contents TEXT,
-    managed INTEGER NOT NULL DEFAULT 0,
+    managed BOOLEAN NOT NULL DEFAULT 0,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
+    deleted BOOLEAN NOT NULL DEFAULT 0,
     PRIMARY KEY (id, version)
 );
 
@@ -88,27 +64,14 @@ WHERE iv.deleted = 0;
 -- Idea-Tag junction -----------------------------------------------------------
 
 CREATE TABLE idea_tags (
-    id INTEGER PRIMARY KEY,
     idea_id INTEGER NOT NULL,
+    idea_version INTEGER NOT NULL,
     tag_id INTEGER NOT NULL,
+    deleted BOOLEAN NOT NULL DEFAULT 0,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (tag_id) REFERENCES tags_versioned(id),
-    UNIQUE (idea_id, tag_id)
-);
-
--- Idea-Discipline junction ----------------------------------------------------
-
-CREATE TABLE idea_disciplines (
-    id INTEGER PRIMARY KEY,
-    idea_id INTEGER NOT NULL,
-    discipline_id INTEGER NOT NULL,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (discipline_id) REFERENCES disciplines_versioned(id),
-    UNIQUE (idea_id, discipline_id)
+    PRIMARY KEY (idea_id, idea_version, tag_id),
+    FOREIGN KEY (idea_id, idea_version) REFERENCES ideas_versioned(id, version),
+    FOREIGN KEY (tag_id) REFERENCES tags_versioned(id)
 );
 
 -- Relationships ---------------------------------------------------------------
@@ -123,7 +86,7 @@ CREATE TABLE relationships_versioned (
     to_idea_id INTEGER NOT NULL,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
+    deleted BOOLEAN NOT NULL DEFAULT 0,
     PRIMARY KEY (id, version),
     FOREIGN KEY (underlying_idea_id) REFERENCES ideas_versioned(id),
     FOREIGN KEY (from_idea_id) REFERENCES ideas_versioned(id),
@@ -154,15 +117,15 @@ CREATE TABLE sources_versioned (
     meta_title TEXT NOT NULL,
     meta_authors TEXT NOT NULL DEFAULT '[]',
     meta_original_year INTEGER,
-    original_year_is_circa INTEGER,
+    original_year_is_circa BOOLEAN,
     edition_year INTEGER,
-    edition_year_is_circa INTEGER,
+    edition_year_is_circa BOOLEAN,
     edition TEXT,
     translators TEXT NOT NULL DEFAULT '[]',
     publisher TEXT NOT NULL DEFAULT '',
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
+    deleted BOOLEAN NOT NULL DEFAULT 0,
     PRIMARY KEY (id, version),
     FOREIGN KEY (underlying_idea_id) REFERENCES ideas_versioned(id)
 );
@@ -185,12 +148,10 @@ CREATE TABLE hierarchies_versioned (
     name TEXT NOT NULL,
     notes TEXT,
     check_tags TEXT NOT NULL DEFAULT '[]',
-    discipline_id INTEGER NOT NULL,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id, version),
-    FOREIGN KEY (discipline_id) REFERENCES disciplines_versioned(id)
+    deleted BOOLEAN NOT NULL DEFAULT 0,
+    PRIMARY KEY (id, version)
 );
 
 CREATE VIEW hierarchies AS
@@ -206,137 +167,16 @@ WHERE hv.deleted = 0;
 -- Hierarchy-Idea membership ---------------------------------------------------
 
 CREATE TABLE hierarchy_ideas (
-    id INTEGER PRIMARY KEY,
     hierarchy_id INTEGER NOT NULL,
+    hierarchy_version INTEGER NOT NULL,
     idea_id INTEGER NOT NULL,
-    parent_id INTEGER,
+    parent_idea_id INTEGER,
     relationship_id INTEGER,
+    deleted BOOLEAN NOT NULL DEFAULT 0,
     inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (hierarchy_id) REFERENCES hierarchies_versioned(id),
+    PRIMARY KEY (hierarchy_id, hierarchy_version, idea_id),
+    FOREIGN KEY (hierarchy_id, hierarchy_version) REFERENCES hierarchies_versioned(id, version),
     FOREIGN KEY (idea_id) REFERENCES ideas_versioned(id),
-    FOREIGN KEY (parent_id) REFERENCES hierarchy_ideas(id),
-    FOREIGN KEY (relationship_id) REFERENCES relationships_versioned(id),
-    UNIQUE (hierarchy_id, parent_id, idea_id)
+    FOREIGN KEY (parent_idea_id) REFERENCES ideas_versioned(id),
+    FOREIGN KEY (relationship_id) REFERENCES relationships_versioned(id)
 );
-
--- Timelines -------------------------------------------------------------------
-
-CREATE TABLE timelines_versioned (
-    id INTEGER NOT NULL,
-    version INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    notes TEXT,
-    check_tags TEXT NOT NULL DEFAULT '[]',
-    discipline_id INTEGER NOT NULL,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id, version),
-    FOREIGN KEY (discipline_id) REFERENCES disciplines_versioned(id)
-);
-
-CREATE VIEW timelines AS
-SELECT tv.*
-FROM timelines_versioned tv
-INNER JOIN (
-    SELECT id, MAX(version) AS max_version
-    FROM timelines_versioned
-    GROUP BY id
-) latest ON tv.id = latest.id AND tv.version = latest.max_version
-WHERE tv.deleted = 0;
-
--- Timeline-Idea membership ----------------------------------------------------
-
-CREATE TABLE timeline_ideas (
-    id INTEGER PRIMARY KEY,
-    timeline_id INTEGER NOT NULL,
-    idea_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    end_date TEXT,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (timeline_id) REFERENCES timelines_versioned(id),
-    FOREIGN KEY (idea_id) REFERENCES ideas_versioned(id),
-    UNIQUE (timeline_id, idea_id, date, end_date)
-);
-
--- Analyses --------------------------------------------------------------------
-
-CREATE TABLE analyses_versioned (
-    id INTEGER NOT NULL,
-    version INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    contents TEXT NOT NULL,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id, version)
-);
-
-CREATE VIEW analyses AS
-SELECT av.*
-FROM analyses_versioned av
-INNER JOIN (
-    SELECT id, MAX(version) AS max_version
-    FROM analyses_versioned
-    GROUP BY id
-) latest ON av.id = latest.id AND av.version = latest.max_version
-WHERE av.deleted = 0;
-
--- Analysis junction tables ----------------------------------------------------
-
-CREATE TABLE analysis_ideas (
-    id INTEGER PRIMARY KEY,
-    analysis_id INTEGER NOT NULL,
-    idea_id INTEGER NOT NULL,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (analysis_id) REFERENCES analyses_versioned(id),
-    FOREIGN KEY (idea_id) REFERENCES ideas_versioned(id),
-    UNIQUE (analysis_id, idea_id)
-);
-
-CREATE TABLE analysis_hierarchies (
-    id INTEGER PRIMARY KEY,
-    analysis_id INTEGER NOT NULL,
-    hierarchy_id INTEGER NOT NULL,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (analysis_id) REFERENCES analyses_versioned(id),
-    FOREIGN KEY (hierarchy_id) REFERENCES hierarchies_versioned(id),
-    UNIQUE (analysis_id, hierarchy_id)
-);
-
-CREATE TABLE analysis_timelines (
-    id INTEGER PRIMARY KEY,
-    analysis_id INTEGER NOT NULL,
-    timeline_id INTEGER NOT NULL,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (analysis_id) REFERENCES analyses_versioned(id),
-    FOREIGN KEY (timeline_id) REFERENCES timelines_versioned(id),
-    UNIQUE (analysis_id, timeline_id)
-);
-
--- Attachments -----------------------------------------------------------------
-
-CREATE TABLE attachments_versioned (
-    id INTEGER NOT NULL,
-    version INTEGER NOT NULL,
-    mime TEXT NOT NULL,
-    inserted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    deleted INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id, version)
-);
-
-CREATE VIEW attachments AS
-SELECT av.*
-FROM attachments_versioned av
-INNER JOIN (
-    SELECT id, MAX(version) AS max_version
-    FROM attachments_versioned
-    GROUP BY id
-) latest ON av.id = latest.id AND av.version = latest.max_version
-WHERE av.deleted = 0;
